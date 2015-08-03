@@ -1,0 +1,11 @@
+---
+
+- name: Copy web files to server
+  copy: 
+    src: "{{ item }}"
+    dest: "/var/www/html/"
+  with_items: 
+    - mysql.php
+  notify: restart httpd
+  tags:
+    - content

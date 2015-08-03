@@ -1,0 +1,104 @@
+---
+- name: Install mysql and deps
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items: packages
+  tags: mysql
+
+- name: Make a mysql directory
+  file:
+    name: /etc/mysql/conf.d
+    state: directory
+  tags: mysql
+
+- name: start mysqld
+  service: 
+    name: "{{ mysql_service }}"
+    state: started 
+    enabled: true
+  tags: mysql
+
+- name: Build and place the my.cnf file on master
+  template: 
+    src: my.cnf.master.j2
+    dest: /etc/my.cnf
+  when: ansible_eth0.ipv4.address == "{{ hostvars[groups['LAMP'][0]]['ansible_eth0']['ipv4']['address'] }}"
+  notify:
+    - restart mysql
+
+- name: Build and place the my.cnf file on slave
+  template: 
+    src: my.cnf.slave.j2
+    dest: /etc/my.cnf
+  when: ansible_eth0.ipv4.address == "{{ hostvars[groups['LAMP'][1]]['ansible_eth0']['ipv4']['address'] }}"
+  notify:
+    - restart mysql
+
+- name: Create the users
+  mysql_user:
+    name: "{{ lampuser }}"
+    password: "{{ lamppass }}"
+    priv: '*.*:ALL,GRANT'
+    state: present
+  tags: mysql
+
+- mysql_user: 
+    name: "replicator" 
+    host: "%" 
+    password: "{{ mysql_password }}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+  notify:
+    - restart mysql
+
+- name: Create a guard file...prevents replication from running on subsequent runs
+  stat: 
+    path: /etc/mysql/ansible.repl
+  register: check_sql_path
+
+- name: Setup replication on the master
+  mysql_replication:
+    mode: changemaster
+    master_host: "{{ hostvars[groups['LAMP'][1]]['ansible_eth0']['ipv4']['address'] }}"
+    master_user: replicator
+    master_password: "{{ mysql_password }}"
+  when: check_sql_path.stat.exists == false and ansible_eth0.ipv4.address == "{{ hostvars[groups['LAMP'][0]]['ansible_eth0']['ipv4']['address'] }}"
+  notify: 
+    - restart mysql
+
+- name: Setup replicaton on the slave
+  mysql_replication: 
+    mode: changemaster
+    master_host: "{{ hostvars[groups['LAMP'][0]]['ansible_eth0']['ipv4']['address'] }}"
+    master_user: replicator
+    master_password: "{{ mysql_password }}"
+  when: check_sql_path.stat.exists == false and ansible_eth0.ipv4.address == "{{ hostvars[groups['LAMP'][1]]['ansible_eth0']['ipv4']['address'] }}"
+  notify:
+    - restart mysql
+
+- name: Remove the test database
+  mysql_db:
+    name: test
+    state: absent
+  tags: mysql
+
+- name: Remove anonymous users
+  mysql_user:
+    name: ''
+    host: "{{ item }}"
+    state: absent
+  with_items:
+    - localhost
+    - "{{ ansible_hostname }}"
+  tags: mysql
+
+- name: Create the databases
+  mysql_db:
+    name: "{{ mysql_database }}"
+    state: present
+  tags: mysql
+
+- name: Set the guard file for subsequent runs
+  command: touch /etc/mysql/ansible.repl
+  when: check_sql_path.stat.exists == false
