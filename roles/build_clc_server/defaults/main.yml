@@ -1,7 +1,15 @@
-public_key: "{{ lookup('file', './keys/ssh-rsa-key.pub') }}"
+public_key: "{{ lookup('file', '{{ key_loc }}') }}"
+key_loc: ./keys/ssh-rsa-key.pub
 group_size: 1
 type: standard
 storage_type: standard
 cpu: 1
 memory: 2
 datacenter: 'VA1'
+
+# Overrideables
+lamp_group_name: LAMP
+lamp_server_count: 2
+haproxy_group_name: HAPROXY
+lamp_server_name: LAMP
+haproxy_server_name: HAPXY

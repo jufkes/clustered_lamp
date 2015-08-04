@@ -5,25 +5,25 @@
 
 - name: CLC | Create LAMP Group
   clc_group:
-    name: LAMP
+    name: "{{ lamp_group_name }}"
     location: "{{ datacenter }}"
     state: present
 
 - name: CLC | Create HAPROXY Group
   clc_group:
-    name: HAPROXY
+    name: "{{ haproxy_group_name }}"
     location: "{{ datacenter }}"
     state: present
 
 - name: CLC | Build LAMP Server if Needed
   clc_server:
-    name: LAMP
+    name: "{{ lamp_server_name }}"
     location: "{{ datacenter }}"
     template: centos-6-64
     password: "{{ serverpass.stdout }}"
-    exact_count: 2 
-    group: LAMP
-    count_group: LAMP
+    exact_count: "{{ lamp_server_count }}"
+    group: "{{ lamp_group_name }}"
+    count_group: "{{ lamp_group_name }}"
     cpu: "{{ cpu }}" 
     memory: "{{ memory }}"
     type: "{{ type }}"
@@ -32,13 +32,13 @@
 
 - name: CLC | Build HAPROXY Server if Needed
   clc_server:
-    name: HAPXY
+    name: "{{ haproxy_server_name }}"
     location: "{{ datacenter }}"
     template: ubuntu-14-64
     password: "{{ serverpass.stdout }}"
     exact_count: 1
-    group: HAPROXY
-    count_group: HAPROXY
+    group: "{{ haproxy_group_name }}"
+    count_group: "{{ haproxy_group_name }}"
     cpu: "{{ cpu }}" 
     memory: "{{ memory }}"
     type: "{{ type }}"
@@ -50,6 +50,7 @@
     server_ids: "{{ item.name }}"
     ports:
       - "80"
+      - "443"
     state: present
   with_flattened: haproxy.servers
 
