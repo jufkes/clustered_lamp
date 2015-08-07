@@ -10,6 +10,14 @@ This is playbook will provision a clustered lamp stack with public IP address in
 
 ### DEPENDENCIES:
 * Place your public key in the 'keys/ssh-rsa-key.pub' file
+* 
+
+### How to use this playbook:
+
+* run it through the Automation Framework with a payload resembling:
+<insert payload>
+* run it from CLI 
+* 
 
 ### TYPICAL OVERRIDES: 
 * key_loc: specify a file (absolute path) to your public key (default == keys/ssh-key.pub)
